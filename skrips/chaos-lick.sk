@@ -1,0 +1,170 @@
+# ---------------------------------------------------------
+# Chaos Lick - Combined Face + Tongue Animation
+# 1. Opens the stone face's mouth
+# 2. Lifts the pink wool tongue (7,61,7 - 8,61,13) up 1 block
+# 3. Slides it north 6 blocks, 1 at a time
+# 4. Retracts it south 6 blocks, 1 at a time
+# 5. Lowers the tongue back down
+# 6. Closes the mouth
+# ---------------------------------------------------------
+
+command /chaoslick:
+    permission: op
+    trigger:
+        if {chaoslick::active} is true:
+            send "&cThe face is already licking!" to player
+            stop
+
+        set {chaoslick::active} to true
+        set {_world} to "world" parsed as world
+        set {_fc} to location(7, 66, 5, {_world})
+        set {_tc} to location(7, 61, 5, {_world})
+
+        # =====================================================
+        # === OPEN MOUTH ===
+        # =====================================================
+
+        play sound "block.anvil.land" with volume 2 and pitch 0.4 at {_fc}
+        wait 5 ticks
+
+        # Step 1a: upper face UP
+        set {_region1} to region from location(4, 64, 5, {_world}) to location(11, 69, 5, {_world})
+        move {_region1} up by 1 block
+
+        # Step 1b: chin NORTH
+        set {_region2} to region from location(6, 63, 5, {_world}) to location(9, 63, 5, {_world})
+        move {_region2} north by 1 block
+
+        play sound "block.grindstone.use" with volume 2 and pitch 0.5 at {_fc}
+
+        # Step 1c: fill andesite side gaps
+        set block at location(11, 64, 5, {_world}) to andesite
+        set block at location(10, 64, 5, {_world}) to andesite
+        set block at location(5, 64, 5, {_world}) to andesite
+        set block at location(4, 64, 5, {_world}) to andesite
+
+        wait 10 ticks
+
+        # Step 2: chin DOWN
+        set {_region3} to region from location(6, 63, 4, {_world}) to location(9, 63, 4, {_world})
+        move {_region3} down by 1 block
+        play sound "block.grindstone.use" with volume 1.5 and pitch 0.6 at {_fc}
+
+        wait 10 ticks
+
+        # Step 3: inner passage DOWN
+        set {_region4} to region from location(6, 62, 4, {_world}) to location(9, 62, 5, {_world})
+        move {_region4} down by 1 block
+        play sound "block.grindstone.use" with volume 1.5 and pitch 0.7 at {_fc}
+
+        wait 5 ticks
+        play sound "block.anvil.land" with volume 1.5 and pitch 0.65 at {_fc}
+
+        # Pause with mouth open before tongue emerges
+        wait 15 ticks
+
+        # =====================================================
+        # === TONGUE - LIFT ===
+        # =====================================================
+
+        play sound "entity.zombie.ambient" with volume 1.5 and pitch 0.5 at {_tc}
+        wait 8 ticks
+
+        # Lift tongue from Y=61 to Y=62
+        set {_tongue} to region from location(7, 61, 7, {_world}) to location(8, 61, 13, {_world})
+        move {_tongue} up by 1 block
+        play sound "block.honey_block.slide" with volume 1.5 and pitch 0.5 at {_tc}
+
+        wait 5 ticks
+
+        # =====================================================
+        # === TONGUE - EXTEND (6 blocks north, 1 at a time) ===
+        # Before iteration N: tip at Z=(8-N), tail at Z=(14-N)
+        # =====================================================
+
+        loop 6 times:
+            set {_z_min} to 8 - loop-number
+            set {_z_max} to 14 - loop-number
+            set {_tongue} to region from location(7, 62, {_z_min}, {_world}) to location(8, 62, {_z_max}, {_world})
+            move {_tongue} north by 1 block
+            play sound "block.honey_block.slide" with volume 2 and pitch 0.5 at {_tc}
+            wait 5 ticks
+
+        # Tongue fully extended - licking sounds
+        play sound "block.honey_block.fall" with volume 2 and pitch 0.5 at {_tc}
+        wait 8 ticks
+        play sound "block.honey_block.fall" with volume 1.5 and pitch 0.7 at {_tc}
+        wait 8 ticks
+
+        # =====================================================
+        # === TONGUE - RETRACT (6 blocks south, 1 at a time) ===
+        # Before iteration N: tip at Z=N, tail at Z=(N+6)
+        # =====================================================
+
+        loop 6 times:
+            set {_z_min} to loop-number
+            set {_z_max} to loop-number + 6
+            set {_tongue} to region from location(7, 62, {_z_min}, {_world}) to location(8, 62, {_z_max}, {_world})
+            move {_tongue} south by 1 block
+            play sound "block.honey_block.slide" with volume 2 and pitch 0.5 at {_tc}
+            wait 5 ticks
+
+        # =====================================================
+        # === TONGUE - LOWER ===
+        # =====================================================
+
+        # Lower tongue back to Y=61 (tongue is now back at Z=7-13, Y=62)
+        set {_tongue} to region from location(7, 62, 7, {_world}) to location(8, 62, 13, {_world})
+        move {_tongue} down by 1 block
+        play sound "block.honey_block.fall" with volume 2 and pitch 0.4 at {_tc}
+
+        wait 10 ticks
+
+        # =====================================================
+        # === CLOSE MOUTH ===
+        # =====================================================
+
+        play sound "block.anvil.land" with volume 2 and pitch 0.4 at {_fc}
+        wait 5 ticks
+
+        # Reverse step 3: inner passage UP
+        set {_close_region4} to region from location(6, 61, 4, {_world}) to location(9, 61, 5, {_world})
+        move {_close_region4} up by 1 block
+        play sound "block.grindstone.use" with volume 1.5 and pitch 0.7 at {_fc}
+
+        # Fill stone at Y=61
+        loop integers from 6 to 9:
+            set block at location(loop-integer, 61, 4, {_world}) to stone
+            set block at location(loop-integer, 61, 5, {_world}) to stone
+
+        wait 10 ticks
+
+        # Reverse step 2: chin UP
+        set {_close_region3} to region from location(6, 62, 4, {_world}) to location(9, 62, 4, {_world})
+        move {_close_region3} up by 1 block
+        play sound "block.grindstone.use" with volume 1.5 and pitch 0.6 at {_fc}
+
+        wait 10 ticks
+
+        # Reverse step 1b: chin SOUTH
+        set {_close_region2} to region from location(6, 63, 4, {_world}) to location(9, 63, 4, {_world})
+        move {_close_region2} south by 1 block
+        play sound "block.grindstone.use" with volume 2 and pitch 0.55 at {_fc}
+
+        wait 10 ticks
+
+        # Reverse step 1a: upper face DOWN
+        set {_close_region1} to region from location(4, 65, 5, {_world}) to location(11, 70, 5, {_world})
+        move {_close_region1} down by 1 block
+        play sound "block.grindstone.use" with volume 2 and pitch 0.5 at {_fc}
+
+        # Fill stone at Y=70
+        loop integers from 4 to 11:
+            set block at location(loop-integer, 70, 5, {_world}) to stone
+
+        wait 5 ticks
+
+        # Final seal thud
+        play sound "block.anvil.land" with volume 2 and pitch 0.55 at {_fc}
+
+        delete {chaoslick::active}

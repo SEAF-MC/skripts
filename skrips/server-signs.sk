@@ -1,0 +1,74 @@
+# ---------------------------------------------------------
+# Server Transfer Signs Skript
+# Enforces Velocity transfer signs with black, glowing text
+# Transports players upon left- or right-click
+# ---------------------------------------------------------
+
+options:
+    dimension: minecraft:overworld
+
+# Core transfer logic
+function transferPlayer(p: player, target: text):
+    if {serversigns::cooldown::%uuid of {_p}%} is set:
+        stop
+    set {serversigns::cooldown::%uuid of {_p}%} to true
+
+    connect {_p} to proxy server {_target}
+
+    wait 3 seconds
+    delete {serversigns::cooldown::%uuid of {_p}%}
+
+# Auto-clear stale cooldowns on join
+on join:
+    delete {serversigns::cooldown::%uuid of player%}
+
+# Check if a clicked block is one of the transfer signs
+function handleClick(p: player, b: block) :: boolean:
+    set {_loc} to location of {_b}
+    set {_x} to floor(x-coordinate of {_loc})
+    set {_y} to floor(y-coordinate of {_loc})
+    set {_z} to floor(z-coordinate of {_loc})
+
+    if {_y} is 76:
+        if {_z} is -24:
+            if {_x} is -26:
+                transferPlayer({_p}, "creative")
+                return true
+            else if {_x} is -23:
+                transferPlayer({_p}, "survival")
+                return true
+            else if {_x} is -20:
+                transferPlayer({_p}, "event")
+                return true
+
+    return false
+
+# Function to ensure a sign exists with proper facing, text, and glowing properties
+function ensureSign(x: number, y: number, z: number, server_label: text):
+    execute console command "execute in {@dimension} run setblock %{_x}% %{_y}% %{_z}% spruce_wall_sign[facing=south]{front_text:{has_glowing_text:1b,color:""black"",messages:['Click Here For','','%{_server_label}%','']}} replace"
+
+# Place and verify all three signs
+function ensureAllSigns():
+    # Sign 1: Creative
+    ensureSign(-26, 76, -24, "CREATIVE")
+    # Sign 2: Survival
+    ensureSign(-23, 76, -24, "SURVIVAL")
+    # Sign 3: Event
+    ensureSign(-20, 76, -24, "EVENT")
+
+# Automatically ensure signs and their text on load
+on load:
+    ensureAllSigns()
+
+# Handle right-click and standard left-click
+on click:
+    if event-block is set:
+        if handleClick(player, event-block) is true:
+            cancel event
+
+# Handle left-click in Adventure mode via arm swing on targeted block
+on arm swing:
+    set {_b} to targeted block of player
+    if {_b} is set:
+        if distance between player and {_b} <= 5:
+            handleClick(player, {_b})

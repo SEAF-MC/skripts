@@ -1,0 +1,135 @@
+# ---------------------------------------------------------
+# Chaos Face - Mouth Opening Sequence
+# Opens the stone face's mouth to reveal the passage,
+# then closes it after 3 seconds.
+# ---------------------------------------------------------
+
+command /chaosface:
+    permission: op
+    trigger:
+        # Guard against re-triggering while already active
+        if {chaosface::active} is true:
+            send "&cThe face is already moving!" to player
+            stop
+
+        set {chaosface::active} to true
+        set {_world} to "world" parsed as world
+
+        # Face center for sounds
+        set {_fc} to location(7, 66, 5, {_world})
+
+        # =====================================================
+        # === OPENING SEQUENCE ===
+        # =====================================================
+
+        # Initial deep activation rumble
+        play sound "block.anvil.land" with volume 2 and pitch 0.4 at {_fc}
+        wait 5 ticks
+
+        # --- OPEN: Step 1a ---
+        # Move the upper face blocks (11,64,5 -> 4,69,5) UP by 1
+        set {_region1} to region from location(4, 64, 5, {_world}) to location(11, 69, 5, {_world})
+        move {_region1} up by 1 block
+
+        # --- OPEN: Step 1b ---
+        # Move the chin row (9,63,5 -> 6,63,5) NORTH by 1 (north = -Z, so Z 5 -> 4)
+        set {_region2} to region from location(6, 63, 5, {_world}) to location(9, 63, 5, {_world})
+        move {_region2} north by 1 block
+
+        # Grinding stone sound from the splitting face
+        play sound "block.grindstone.use" with volume 2 and pitch 0.5 at {_fc}
+
+        # --- OPEN: Step 1c ---
+        # Fill the side gaps of the mouth opening with andesite
+        set block at location(11, 64, 5, {_world}) to andesite
+        set block at location(10, 64, 5, {_world}) to andesite
+        set block at location(5, 64, 5, {_world}) to andesite
+        set block at location(4, 64, 5, {_world}) to andesite
+
+        wait 10 ticks
+
+        # --- OPEN: Step 2 ---
+        # Move the newly repositioned chin row (now at Z=4) DOWN by 1
+        set {_region3} to region from location(6, 63, 4, {_world}) to location(9, 63, 4, {_world})
+        move {_region3} down by 1 block
+
+        # Continued grind, slightly higher pitch as the jaw lowers
+        play sound "block.grindstone.use" with volume 1.5 and pitch 0.6 at {_fc}
+
+        wait 10 ticks
+
+        # --- OPEN: Step 3 ---
+        # Move the inner mouth/passage blocks (9,62,5 -> 6,62,4) DOWN by 1
+        set {_region4} to region from location(6, 62, 4, {_world}) to location(9, 62, 5, {_world})
+        move {_region4} down by 1 block
+
+        play sound "block.grindstone.use" with volume 1.5 and pitch 0.7 at {_fc}
+
+        wait 5 ticks
+
+        # Mouth fully open - heavy settling thud
+        play sound "block.anvil.land" with volume 1.5 and pitch 0.65 at {_fc}
+
+        # =====================================================
+        # === WAIT 3 seconds (mouth open) ===
+        # =====================================================
+        wait 3 seconds
+
+        # =====================================================
+        # === CLOSING SEQUENCE ===
+        # =====================================================
+
+        # Warning rumble - stone is about to move again
+        play sound "block.anvil.land" with volume 2 and pitch 0.4 at {_fc}
+        wait 5 ticks
+
+        # --- CLOSE: Reverse Step 3 ---
+        # Move the inner blocks back UP by 1 (from Y=61 back to Y=62)
+        set {_close_region4} to region from location(6, 61, 4, {_world}) to location(9, 61, 5, {_world})
+        move {_close_region4} up by 1 block
+
+        play sound "block.grindstone.use" with volume 1.5 and pitch 0.7 at {_fc}
+
+        # Fill the gap left at Y=61 (Z=4-5, X=6-9) after reverse step 3
+        loop integers from 6 to 9:
+            set block at location(loop-integer, 61, 4, {_world}) to stone
+            set block at location(loop-integer, 61, 5, {_world}) to stone
+
+        wait 10 ticks
+
+        # --- CLOSE: Reverse Step 2 ---
+        # Move the chin row back UP by 1 (from Y=62 back to Y=63)
+        set {_close_region3} to region from location(6, 62, 4, {_world}) to location(9, 62, 4, {_world})
+        move {_close_region3} up by 1 block
+
+        play sound "block.grindstone.use" with volume 1.5 and pitch 0.6 at {_fc}
+
+        wait 10 ticks
+
+        # --- CLOSE: Reverse Step 1b ---
+        # Move the chin row back SOUTH by 1 (south = +Z, Z 4 -> 5)
+        set {_close_region2} to region from location(6, 63, 4, {_world}) to location(9, 63, 4, {_world})
+        move {_close_region2} south by 1 block
+
+        play sound "block.grindstone.use" with volume 2 and pitch 0.55 at {_fc}
+
+        wait 10 ticks
+
+        # --- CLOSE: Reverse Step 1a ---
+        # Move the upper face blocks back DOWN by 1 (from Y=65..70 back to Y=64..69)
+        # The descending stone blocks automatically overwrite the andesite placed in step 1c
+        set {_close_region1} to region from location(4, 65, 5, {_world}) to location(11, 70, 5, {_world})
+        move {_close_region1} down by 1 block
+
+        play sound "block.grindstone.use" with volume 2 and pitch 0.5 at {_fc}
+
+        # Fill the gap left at Y=70 (Z=5, X=4-11) after reverse step 1a
+        loop integers from 4 to 11:
+            set block at location(loop-integer, 70, 5, {_world}) to stone
+
+        wait 5 ticks
+
+        # Final seal thud
+        play sound "block.anvil.land" with volume 2 and pitch 0.55 at {_fc}
+
+        delete {chaosface::active}

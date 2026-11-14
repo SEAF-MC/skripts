@@ -1,0 +1,15 @@
+# Examples
+-examples/
+examples/
+
+# Documentation
+downloaded docs/
+
+# System / OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editor directories
+.vscode/
+.idea/

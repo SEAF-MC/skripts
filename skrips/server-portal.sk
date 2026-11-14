@@ -1,0 +1,58 @@
+# ---------------------------------------------------------
+# Portal Transfer Skript
+# Moves players to the "cobblemon" server when they enter a portal
+# ---------------------------------------------------------
+
+import:
+    com.viaversion.viaversion.api.Via
+
+options:
+    # The BungeeCord/Velocity server name to connect to
+    target_server: "cobblemon"
+
+# Core transfer logic
+function initiatePortalTransfer(p: player):
+    if {portal::%uuid of {_p}%::cooldown} is set:
+        send "&c[Portal] &7Please wait a few seconds before trying again..." to {_p}
+        stop
+        
+    set {portal::%uuid of {_p}%::cooldown} to true
+    
+    # Teleport player 4 blocks East so they aren't stuck when they return
+    set {_loc} to {_p}'s location
+    add 4 to x-coordinate of {_loc}
+    teleport {_p} to {_loc}
+    
+    # Send player to the target server
+    connect {_p} to {@target_server}
+    
+    # Cooldown cleanup
+    wait 5 seconds
+    delete {portal::%uuid of {_p}%::cooldown}
+
+# Portal detection
+on player move:
+    if block at player is nether portal:
+        if {portal::%uuid of player%::cooldown} is not set:
+            # Safety Check 1: Bypass check for Geyser players (starts with .)
+            if name of player starts with ".":
+                stop
+
+            # Safety Check 2: Protocol 767 = Minecraft 1.21.1
+            # (Ensures they are on the correct version before transferring)
+            set {_proto} to Via.getAPI().getPlayerVersion(player)
+            if {_proto} is not 767:
+                stop
+
+            initiatePortalTransfer(player)
+
+# Auto-clear stale cooldowns when a player joins
+on join:
+    delete {portal::%uuid of player%::cooldown}
+
+# Op command to manually clear a stuck player's cooldown
+command /portalreset <player>:
+    permission: op
+    trigger:
+        delete {portal::%uuid of arg-1%::cooldown}
+        send "&a[Portal] &7Cleared portal cooldown for &f%arg-1%&7." to player

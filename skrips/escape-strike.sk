@@ -1,0 +1,112 @@
+options:
+    # --- CORE SETTINGS ---
+    item: heavy core
+    name: "&b&lOrbital Escape Core"
+    slot: 8
+    cooldown: 5 # Seconds
+    knockback_radius: 2 # How far the blast reaches
+    blast_damage: 5 # How much damage it deals to trigger the knockback (1 = half a heart)
+
+    # --- TEXT & LORE SETTINGS ---
+    lore_line_1: "&7Right-click to call an orbital reset."
+    lore_line_2: "&c&lWARNING: &cExtreme weight detected!"
+    
+    # Add as many messages as you want here! Just separate them with a pipe character (|)
+    death_messages: "spontaneously combusted|didn't make the cut|returned to civilian life|was obliterated from orbit|was sent to the shadow realm|was mistaken for a bug|was mistaken for a bot|was mistaken for a squid|witnessed Jonkler jork it"
+
+# --- AUTOMATION: Inventory Management ---
+
+on join:
+    set slot {@slot} of player to {@item} named {@name} with lore {@lore_line_1} and {@lore_line_2}
+
+on drop:
+    if name of event-item is {@name}:
+        cancel event
+        send "&cYou cannot discard your Escape Core." to player
+
+on inventory click:
+    if name of event-item is {@name}:
+        cancel event
+        close player's inventory
+        send "&cThis item is locked to your hotbar." to player
+
+every 5 seconds:
+    loop all players:
+        # 1. Sweep inventory for duplicates (0-40 safely covers main inv, armor, and offhand)
+        loop integers between 0 and 40:
+            if loop-integer is not {@slot}:
+                if name of slot loop-integer of loop-player is {@name}:
+                    set slot loop-integer of loop-player to air
+                    
+        # 2. Ensure the locked slot has the item
+        if slot {@slot} of loop-player is not {@item} named {@name}:
+            set slot {@slot} of loop-player to {@item} named {@name} with lore {@lore_line_1} and {@lore_line_2}
+
+# --- LOGIC: The Orbital Strike Sequence ---
+
+on rightclick with {@item}:
+    if name of player's tool is {@name}:
+        
+        # ANTI-SPAM: Ignore clicks if the sequence is active
+        if {escape::%player%::active} is true:
+            stop
+        
+        # Cooldown check
+        if {escape::%player%::nextuse} is set:
+            if now is less than {escape::%player%::nextuse}:
+                set {_remaining} to difference between {escape::%player%::nextuse} and now
+                send "&cWait %{_remaining}% before calling another strike." to player
+                stop
+                
+        # Lock the sequence
+        set {escape::%player%::active} to true
+        send "&7Orbital strike beacon activated." to player
+            
+        set {_p} to player's name
+        
+        # --- INSTANT PARTICLE & SHOCKWAVE SEQUENCE ---
+        
+        # 1. The Red Laser Beam
+        execute console command "execute at %{_p}% run particle minecraft:dust{color:[1.0,0.0,0.0],scale:2.0} ~ ~30 ~ 0.1 30 0.1 0 1000 force"
+        
+        # 2. The Main Explosion Flash & Cloud
+        execute console command "execute at %{_p}% run particle minecraft:explosion_emitter ~ ~ ~ 0 0 0 0 1 force"
+        
+        # 3. Ground Debris
+        execute console command "execute at %{_p}% run particle minecraft:lava ~ ~0.5 ~ 1 0.5 1 1 50 force"
+        execute console command "execute at %{_p}% run particle minecraft:campfire_cosy_smoke ~ ~0.5 ~ 1 0.5 1 0.2 100 force"
+        
+        # 4. Vanilla Damage Knockback
+        loop all entities in radius {@knockback_radius} around player:
+            if loop-entity is not player:
+                make player damage loop-entity by {@blast_damage}
+            
+        # The Final Moment
+        play sound "entity.generic.explode" with volume 1 and pitch 1 at player
+        
+        # Tag the player for the custom death message right before killing them
+        set {escape::%player%::custom_death} to true 
+        kill player
+        
+        # Unlock and set cooldown
+        delete {escape::%player%::active}
+        set {escape::%player%::nextuse} to now
+        add {@cooldown} seconds to {escape::%player%::nextuse}
+
+# --- SAFETY NETS & CUSTOM DEATH MESSAGE ---
+
+on quit:
+    delete {escape::%player%::active}
+
+on death of player:
+    delete {escape::%victim%::active}
+    
+    # Check if this specific death was caused by the Orbital Core
+    if {escape::%victim%::custom_death} is true:
+        
+        # Automatically split the list of messages and pick a random one
+        set {_msgs::*} to {@death_messages} split at "|"
+        set {_chosen_msg} to a random element out of {_msgs::*}
+        
+        set the death message to "%victim's name% %{_chosen_msg}%"
+        delete {escape::%victim%::custom_death} # Clean up the tag

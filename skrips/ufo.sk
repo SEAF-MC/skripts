@@ -1,0 +1,89 @@
+# ---------------------------------------------------------
+# UFO Timer Logic
+# Triggers randomly between 1 minute and 5 hours (300 mins)
+# ---------------------------------------------------------
+on load:
+    if {ufo::next_flight} is not set:
+        set {ufo::next_flight} to a random integer between 1 and 300
+    if {ufo::timer} is not set:
+        set {ufo::timer} to 0
+
+every 1 minute:
+    add 1 to {ufo::timer}
+    if {ufo::timer} >= {ufo::next_flight}:
+        execute console command "/ufotest"
+        set {ufo::next_flight} to a random integer between 1 and 300
+        set {ufo::timer} to 0
+
+# ---------------------------------------------------------
+# UFO Flight Logic & Command
+# ---------------------------------------------------------
+command /ufotest:
+    permission: op
+    trigger:
+        set {_world} to "world" parsed as world
+        set {_y} to 100 
+        set {_z} to a random number between -50 and 50
+
+        chance of 50%:
+            set {_loc} to location(-50, {_y}, {_z}, {_world})
+            set {_end} to location(50, {_y}, {_z}, {_world})
+        else:
+            set {_loc} to location(50, {_y}, {_z}, {_world})
+            set {_end} to location(-50, {_y}, {_z}, {_world})
+
+        # --- Bulletproof Movement Math ---
+        # Ditching vectors entirely. Calculating the raw X and Z distance per tick.
+        set {_distance} to distance between {_loc} and {_end}
+        set {_steps} to {_distance} / 0.5
+        
+        set {_distX} to x-coordinate of {_end} - x-coordinate of {_loc}
+        set {_distZ} to z-coordinate of {_end} - z-coordinate of {_loc}
+        
+        set {_stepX} to {_distX} / {_steps}
+        set {_stepZ} to {_distZ} / {_steps}
+
+        # --- Define the UFO Shapes ---
+        # Using stacked circles instead of spheres to prevent particle spam
+        
+        # Outer Ring
+        set {_ufo-ring} to a circle of radius 3
+        set particle of {_ufo-ring} to end rod particle
+        
+        # Inner Dome (Base Layer)
+        set {_ufo-dome1} to a circle of radius 1.5
+        set particle of {_ufo-dome1} to flame particle
+        
+        # Inner Dome (Top Layer)
+        set {_ufo-dome2} to a circle of radius 0.7
+        set particle of {_ufo-dome2} to flame particle
+        
+        # Engine Core
+        set {_ufo-engine} to a circle of radius 0.5
+        set particle of {_ufo-engine} to soul fire flame particle
+
+        # Flight Loop
+        loop rounded up {_steps} times:
+            # Manually move the location by adding the raw X and Z steps
+            add {_stepX} to x-coordinate of {_loc}
+            add {_stepZ} to z-coordinate of {_loc}
+
+            # Draw outer ring
+            draw the shape {_ufo-ring} at {_loc}
+
+            # Draw dome layer 1 (Lower)
+            set {_domeLoc1} to location of {_loc}
+            add 0.5 to y-coordinate of {_domeLoc1}
+            draw the shape {_ufo-dome1} at {_domeLoc1}
+            
+            # Draw dome layer 2 (Higher, smaller circle)
+            set {_domeLoc2} to location of {_loc}
+            add 1 to y-coordinate of {_domeLoc2}
+            draw the shape {_ufo-dome2} at {_domeLoc2}
+
+            # Draw engine
+            set {_engineLoc} to location of {_loc}
+            subtract 0.2 from y-coordinate of {_engineLoc}
+            draw the shape {_ufo-engine} at {_engineLoc}
+
+            wait 1 tick
