@@ -9,6 +9,7 @@ import:
 options:
     # The BungeeCord/Velocity server name to connect to
     target_server: "cobblemon"
+    modpack_url: https://discord.com/channels/1315632863437131819/1389061931373166634/1507661232327364630
 
 # Core transfer logic
 function initiatePortalTransfer(p: player):
@@ -30,29 +31,45 @@ function initiatePortalTransfer(p: player):
     wait 5 seconds
     delete {portal::%uuid of {_p}%::cooldown}
 
+# Alert player when denying transfer due to missing modpack
+function alertModpack(p: player):
+    if {portal::%uuid of {_p}%::alert_cooldown} is set:
+        stop
+    set {portal::%uuid of {_p}%::alert_cooldown} to true
+
+    send formatted "&c[Portal] &7You are trying to join &eSEAF MC Cobblemon &7without our modpack, please install it from <link:{@modpack_url}><aqua><underline>here<reset>&7." to {_p}
+
+    # 90-second timeout before sending the alert again
+    wait 90 seconds
+    delete {portal::%uuid of {_p}%::alert_cooldown}
+
 # Portal detection
 on player move:
     if block at player is nether portal:
+        # Check 1: Deny Geyser players (starts with .)
+        if name of player starts with ".":
+            alertModpack(player)
+            stop
+
+        # Check 2: Protocol 767 = Minecraft 1.21.1
+        # (Ensures they are on the correct version before transferring)
+        set {_proto} to Via.getAPI().getPlayerVersion(player)
+        if {_proto} is not 767:
+            alertModpack(player)
+            stop
+
         if {portal::%uuid of player%::cooldown} is not set:
-            # Safety Check 1: Bypass check for Geyser players (starts with .)
-            if name of player starts with ".":
-                stop
-
-            # Safety Check 2: Protocol 767 = Minecraft 1.21.1
-            # (Ensures they are on the correct version before transferring)
-            set {_proto} to Via.getAPI().getPlayerVersion(player)
-            if {_proto} is not 767:
-                stop
-
             initiatePortalTransfer(player)
 
 # Auto-clear stale cooldowns when a player joins
 on join:
     delete {portal::%uuid of player%::cooldown}
+    delete {portal::%uuid of player%::alert_cooldown}
 
 # Op command to manually clear a stuck player's cooldown
 command /portalreset <player>:
     permission: op
     trigger:
         delete {portal::%uuid of arg-1%::cooldown}
-        send "&a[Portal] &7Cleared portal cooldown for &f%arg-1%&7." to player
+        delete {portal::%uuid of arg-1%::alert_cooldown}
+        send "&a[Portal] &7Cleared portal cooldowns for &f%arg-1%&7." to player

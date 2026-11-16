@@ -23,14 +23,35 @@ command /ufotest:
     trigger:
         set {_world} to "world" parsed as world
         set {_y} to 100 
-        set {_z} to a random number between -50 and 50
 
         chance of 50%:
-            set {_loc} to location(-50, {_y}, {_z}, {_world})
-            set {_end} to location(50, {_y}, {_z}, {_world})
+            # Fly across the X axis (West <-> East)
+            set {_start_z} to a random number between -50 and 50
+            chance of 33%:
+                set {_end_z} to {_start_z}
+            else:
+                set {_end_z} to a random number between -50 and 50
+
+            chance of 50%:
+                set {_loc} to location(-50, {_y}, {_start_z}, {_world})
+                set {_end} to location(50, {_y}, {_end_z}, {_world})
+            else:
+                set {_loc} to location(50, {_y}, {_start_z}, {_world})
+                set {_end} to location(-50, {_y}, {_end_z}, {_world})
         else:
-            set {_loc} to location(50, {_y}, {_z}, {_world})
-            set {_end} to location(-50, {_y}, {_z}, {_world})
+            # Fly across the Z axis (North <-> South)
+            set {_start_x} to a random number between -50 and 50
+            chance of 33%:
+                set {_end_x} to {_start_x}
+            else:
+                set {_end_x} to a random number between -50 and 50
+
+            chance of 50%:
+                set {_loc} to location({_start_x}, {_y}, -50, {_world})
+                set {_end} to location({_end_x}, {_y}, 50, {_world})
+            else:
+                set {_loc} to location({_start_x}, {_y}, 50, {_world})
+                set {_end} to location({_end_x}, {_y}, -50, {_world})
 
         # --- Bulletproof Movement Math ---
         # Ditching vectors entirely. Calculating the raw X and Z distance per tick.

@@ -1,23 +1,22 @@
 options:
     # --- CORE SETTINGS ---
     item: heavy core
-    name: "&b&lOrbital Escape Core"
+    name: "&b&lOrbital Escape Strike"
     slot: 8
-    cooldown: 5 # Seconds
+    cooldown: 60 # Seconds
     knockback_radius: 2 # How far the blast reaches
     blast_damage: 5 # How much damage it deals to trigger the knockback (1 = half a heart)
 
     # --- TEXT & LORE SETTINGS ---
     lore_line_1: "&7Right-click to call an orbital reset."
-    lore_line_2: "&c&lWARNING: &cExtreme weight detected!"
     
     # Add as many messages as you want here! Just separate them with a pipe character (|)
-    death_messages: "spontaneously combusted|didn't make the cut|returned to civilian life|was obliterated from orbit|was sent to the shadow realm|was mistaken for a bug|was mistaken for a bot|was mistaken for a squid|witnessed Jonkler jork it"
+    death_messages: "spontaneously combusted|didn't make the cut|returned to civilian life|was obliterated from orbit|was sent to the shadow realm|was mistaken for a bug|was mistaken for a bot|was mistaken for a squid|witnessed Jonkler jork it|joined pocket sand"
 
 # --- AUTOMATION: Inventory Management ---
 
 on join:
-    set slot {@slot} of player to {@item} named {@name} with lore {@lore_line_1} and {@lore_line_2}
+    set slot {@slot} of player to {@item} named {@name} with lore {@lore_line_1}
 
 on drop:
     if name of event-item is {@name}:
@@ -40,7 +39,7 @@ every 5 seconds:
                     
         # 2. Ensure the locked slot has the item
         if slot {@slot} of loop-player is not {@item} named {@name}:
-            set slot {@slot} of loop-player to {@item} named {@name} with lore {@lore_line_1} and {@lore_line_2}
+            set slot {@slot} of loop-player to {@item} named {@name} with lore {@lore_line_1}
 
 # --- LOGIC: The Orbital Strike Sequence ---
 
@@ -55,7 +54,13 @@ on rightclick with {@item}:
         if {escape::%player%::nextuse} is set:
             if now is less than {escape::%player%::nextuse}:
                 set {_remaining} to difference between {escape::%player%::nextuse} and now
-                send "&cWait %{_remaining}% before calling another strike." to player
+                set {_seconds} to rounded up ((ticks of {_remaining}) / 20)
+                if {_seconds} <= 0:
+                    set {_seconds} to 1
+                if {_seconds} is 1:
+                    send "&cWait 1 second before calling another strike." to player
+                else:
+                    send "&cWait %{_seconds}% seconds before calling another strike." to player
                 stop
                 
         # Lock the sequence
